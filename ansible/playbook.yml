@@ -5,7 +5,6 @@
   # One source is: https://serverfault.com/questions/132970/can-i-automatically-add-a-new-host-to-known-hosts
   hosts: all
   gather_facts: no
-  nonsense
   connection: local
   tasks:
     - name: ensure .ssh directory exists
