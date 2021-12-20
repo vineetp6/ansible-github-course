@@ -1,15 +1,15 @@
-name: Lamp Deployment
+name: LAMP Deployment
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
+    workflow_dispatch:
+    push:
+      branches:
       - main
-  pull_request:
+    pull_request:
 
 jobs:
-  lint:
-    name: Lint Ansible Playbook
+  linting:
+    name: Lint Ansible files
     runs-on: ubuntu-latest
 
     steps:
@@ -21,17 +21,19 @@ jobs:
         targets: |
           ansible/playbook.yml
           ansible/inventory.yml
-          
+
         args: "-c ansible/.ansible-lint"
     - name: Publish Playbook Artifact
       uses: actions/upload-artifact@v2
       with:
         name: playbooks
         path: ansible
+
   deploy_to_test:
-     name: Deploy to test
-     runs-on: ubuntu-latest
-     needs: linting
+    name: Deploy to test
+    runs-on: ubuntu-latest
+    needs: linting
+    if: github.ref == 'refs/heads/main'
     
     steps:
     - uses: actions/download-artifact@v2
@@ -46,4 +48,23 @@ jobs:
         options: |
           --inventory inventory-test.yml
           --extra-vars "test_ssh_password=${{ Secrets.TEST_SSH_PASSWORD }}"
-        
+
+  deploy_to_prod:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: deploy_to_test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: playbooks
+        path: ansible
+    
+    - uses: dawidd6/action-ansible-playbook@v2
+      with:
+        playbook: playbook.yml
+        directory: ansible
+        options: |
+          --inventory inventory-prod.yml
+          --extra-vars "prod_ssh_password=${{ Secrets.PROD_SSH_PASSWORD }}"
